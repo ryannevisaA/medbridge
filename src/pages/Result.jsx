@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import jsPDF from 'jspdf'
+import { supabase } from '../supabase'
 
 function Result() {
   const location = useLocation()
@@ -88,7 +89,6 @@ Respond ONLY in this exact JSON format:
       })
 
       const resData = await response.json()
-      console.log('Groq response:', JSON.stringify(resData))
       if (!resData.choices || !resData.choices[0]) throw new Error('No choices')
       const text = resData.choices[0].message.content
       const clean = text.replace(/```json|```/g, '').trim()
@@ -171,7 +171,6 @@ Respond ONLY in this exact JSON format:
     doc.save(`MedBridge_Report_${data.name}.pdf`)
   }
 
-  // Save to history
   useEffect(() => {
     if (result && data) {
       const record = {
@@ -190,6 +189,25 @@ Respond ONLY in this exact JSON format:
       const existing = JSON.parse(localStorage.getItem('medbridge_history') || '[]')
       existing.unshift(record)
       localStorage.setItem('medbridge_history', JSON.stringify(existing.slice(0, 50)))
+
+      const saveToSupabase = async () => {
+        const { error } = await supabase
+          .from('triage_records')
+          .insert([{
+            name: data.name,
+            age: String(data.age),
+            gender: data.gender,
+            symptoms: data.symptoms,
+            duration: data.duration || '',
+            language: data.language,
+            urgency: result.urgency,
+            urgency_label: result.urgency_label,
+            summary: result.summary,
+          }])
+        if (error) console.error('Supabase error:', error)
+        else console.log('Saved to Supabase!')
+      }
+      saveToSupabase()
     }
   }, [result])
 
@@ -214,7 +232,6 @@ Respond ONLY in this exact JSON format:
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4 flex justify-center">
       <div className="w-full max-w-2xl">
-
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-2 rounded-full text-sm font-semibold mb-4">
             🩺 MedBridge
@@ -224,7 +241,6 @@ Respond ONLY in this exact JSON format:
         </div>
 
         <div className="space-y-4">
-
           {result && (
             <div className={`${config.bg} ${config.border} border-2 rounded-3xl p-6 flex items-center gap-5`}>
               <div className={`${config.badge} w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-md flex-shrink-0`}>
@@ -245,12 +261,10 @@ Respond ONLY in this exact JSON format:
                   <p className="text-blue-700 text-sm leading-relaxed">{result.image_findings}</p>
                 </div>
               )}
-
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3">📋 Summary</h3>
                 <p className="text-gray-600 text-sm leading-relaxed">{result.summary}</p>
               </div>
-
               <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                 <h3 className="font-bold text-gray-800 mb-3">✅ Recommendations</h3>
                 <ul className="space-y-2">
@@ -261,7 +275,6 @@ Respond ONLY in this exact JSON format:
                   ))}
                 </ul>
               </div>
-
               {result.home_remedies.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                   <h3 className="font-bold text-gray-800 mb-3">🌿 Home Remedies</h3>
@@ -274,7 +287,6 @@ Respond ONLY in this exact JSON format:
                   </ul>
                 </div>
               )}
-
               <div className="bg-red-50 rounded-2xl shadow-sm p-6 border border-red-100">
                 <h3 className="font-bold text-red-700 mb-3">⚠️ Warning Signs to Watch</h3>
                 <ul className="space-y-2">
@@ -285,26 +297,15 @@ Respond ONLY in this exact JSON format:
                   ))}
                 </ul>
               </div>
-
               <p className="text-center text-xs text-gray-400 px-4">{result.disclaimer}</p>
-
               <div className="flex gap-3 pt-2">
-                <button
-                  onClick={downloadPDF}
-                  className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200"
-                >
+                <button onClick={downloadPDF} className="flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold py-4 rounded-2xl shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200">
                   📄 Download PDF Report
                 </button>
-                <button
-                  onClick={() => navigate('/history')}
-                  className="px-6 py-4 rounded-2xl border-2 border-indigo-300 text-indigo-600 font-bold hover:bg-indigo-50 transition-all duration-200"
-                >
+                <button onClick={() => navigate('/history')} className="px-6 py-4 rounded-2xl border-2 border-indigo-300 text-indigo-600 font-bold hover:bg-indigo-50 transition-all duration-200">
                   📋 History
                 </button>
-                <button
-                  onClick={() => navigate('/triage')}
-                  className="px-6 py-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-all duration-200"
-                >
+                <button onClick={() => navigate('/triage')} className="px-6 py-4 rounded-2xl border-2 border-gray-200 text-gray-600 font-bold hover:bg-gray-50 transition-all duration-200">
                   ← New
                 </button>
               </div>

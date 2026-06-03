@@ -17,82 +17,27 @@ function Result() {
 
   const analyzSymptoms = async (symptoms, age, gender, duration) => {
     try {
-      const messages = [
-        {
-          role: 'system',
-          content: 'You are a medical triage assistant. Always respond with valid JSON only, no extra text.'
-        },
-        {
-          role: 'user',
-          content: data.base64Image
-            ? [
-                {
-                  type: 'text',
-                  text: `Analyze these patient symptoms AND the uploaded image.
-Patient Info:
-- Age: ${age}
-- Gender: ${gender}
-- Symptoms: ${symptoms}
-- Duration: ${duration || 'Not specified'}
-
-Respond ONLY in this exact JSON format:
-{
-  "urgency": "EMERGENCY" or "SOON" or "HOME",
-  "urgency_label": "Go to hospital immediately" or "Book appointment within 3 days" or "Home remedy is fine",
-  "urgency_color": "#e53e3e" or "#dd6b20" or "#38a169",
-  "image_findings": "What you observe in the image (1-2 sentences)",
-  "summary": "2-3 sentence summary including image findings",
-  "recommendations": ["rec1", "rec2", "rec3"],
-  "home_remedies": ["remedy1", "remedy2"] or [],
-  "warning_signs": ["sign1", "sign2"],
-  "disclaimer": "This is AI-generated triage guidance only. Please consult a doctor."
-}`
-                },
-                {
-                  type: 'image_url',
-                  image_url: { url: data.base64Image }
-                }
-              ]
-            : `Analyze these patient symptoms and provide triage guidance.
-Patient Info:
-- Age: ${age}
-- Gender: ${gender}
-- Symptoms: ${symptoms}
-- Duration: ${duration || 'Not specified'}
-
-Respond ONLY in this exact JSON format:
-{
-  "urgency": "EMERGENCY" or "SOON" or "HOME",
-  "urgency_label": "Go to hospital immediately" or "Book appointment within 3 days" or "Home remedy is fine",
-  "urgency_color": "#e53e3e" or "#dd6b20" or "#38a169",
-  "image_findings": null,
-  "summary": "2-3 sentence summary",
-  "recommendations": ["rec1", "rec2", "rec3"],
-  "home_remedies": ["remedy1", "remedy2"] or [],
-  "warning_signs": ["sign1", "sign2"],
-  "disclaimer": "This is AI-generated triage guidance only. Please consult a doctor."
-}`
-        }
-      ]
-
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const response = await fetch('https://ryannevisa-medbridge-backend.hf.space/api/triage', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          model: data.base64Image ? 'meta-llama/llama-4-scout-17b-16e-instruct' : 'llama-3.1-8b-instant',
-          max_tokens: 1000,
-          messages
+          name: data.name,
+          age: String(age),
+          gender,
+          symptoms,
+          duration: duration || '',
+          language: data.language,
+          base64_image: data.base64Image || null
         })
       })
 
-      const resData = await response.json()
-      if (!resData.choices || !resData.choices[0]) throw new Error('No choices')
-      const text = resData.choices[0].message.content
-      const clean = text.replace(/```json|```/g, '').trim()
-      setResult(JSON.parse(clean))
+      const result = await response.json()
+
+      if (!response.ok) throw new Error(result.detail || 'Backend error')
+
+      setResult(result)
     } catch (err) {
       console.error(err)
       setResult({

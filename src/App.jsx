@@ -3,6 +3,7 @@ import Home from './pages/Home'
 import Triage from './pages/Triage'
 import Result from './pages/Result'
 import History from './pages/History'
+import Error from './pages/Error'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/triage" element={<Triage />} />
         <Route path="/result" element={<Result />} />
         <Route path="/history" element={<History />} />
+        <Route path="*" element={<Error />} />
       </Routes>
     </Router>
   )

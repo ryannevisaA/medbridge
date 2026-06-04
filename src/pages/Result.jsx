@@ -9,13 +9,12 @@ function Result() {
   const data = location.state
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
+  const hasRun = useRef(false)
 
-  const hasAnalyzed = useRef(false)
-
-useEffect(() => {
+  useEffect(() => {
+    if (hasRun.current) return
+    hasRun.current = true
     if (!data) { navigate('/'); return }
-    if (hasAnalyzed.current) return
-    hasAnalyzed.current = true
     analyzSymptoms(data.symptoms, data.age, data.gender, data.duration)
   }, [])
 
@@ -23,9 +22,7 @@ useEffect(() => {
     try {
       const response = await fetch('https://ryannevisa-medbridge-backend.hf.space/api/triage', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: data.name,
           age: String(age),
@@ -36,11 +33,8 @@ useEffect(() => {
           base64_image: data.base64Image || null
         })
       })
-
       const result = await response.json()
-
       if (!response.ok) throw new Error(result.detail || 'Backend error')
-
       setResult(result)
     } catch (err) {
       console.error(err)
@@ -120,11 +114,8 @@ useEffect(() => {
     doc.save(`MedBridge_Report_${data.name}.pdf`)
   }
 
-  const hasSaved = useRef(false)
-
-useEffect(() => {
-    if (result && data && !hasSaved.current) {
-      hasSaved.current = true
+  useEffect(() => {
+    if (result && data) {
       const record = {
         id: Date.now(),
         name: data.name,
@@ -141,25 +132,6 @@ useEffect(() => {
       const existing = JSON.parse(localStorage.getItem('medbridge_history') || '[]')
       existing.unshift(record)
       localStorage.setItem('medbridge_history', JSON.stringify(existing.slice(0, 50)))
-
-      const saveToSupabase = async () => {
-        const { error } = await supabase
-          .from('triage_records')
-          .insert([{
-            name: data.name,
-            age: String(data.age),
-            gender: data.gender,
-            symptoms: data.symptoms,
-            duration: data.duration || '',
-            language: data.language,
-            urgency: result.urgency,
-            urgency_label: result.urgency_label,
-            summary: result.summary,
-          }])
-        if (error) console.error('Supabase error:', error)
-        else console.log('Saved to Supabase!')
-      }
-      saveToSupabase()
     }
   }, [result])
 
@@ -227,7 +199,7 @@ useEffect(() => {
                   ))}
                 </ul>
               </div>
-              {result.home_remedies.length > 0 && (
+              {result.home_remedies?.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
                   <h3 className="font-bold text-gray-800 mb-3">🌿 Home Remedies</h3>
                   <ul className="space-y-2">

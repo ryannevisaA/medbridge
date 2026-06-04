@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import jsPDF from 'jspdf'
 import { supabase } from '../supabase'
 
@@ -116,8 +116,11 @@ function Result() {
     doc.save(`MedBridge_Report_${data.name}.pdf`)
   }
 
-  useEffect(() => {
-    if (result && data) {
+  const hasSaved = useRef(false)
+
+useEffect(() => {
+    if (result && data && !hasSaved.current) {
+      hasSaved.current = true
       const record = {
         id: Date.now(),
         name: data.name,

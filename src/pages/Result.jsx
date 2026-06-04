@@ -10,8 +10,12 @@ function Result() {
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const hasAnalyzed = useRef(false)
+
+useEffect(() => {
     if (!data) { navigate('/'); return }
+    if (hasAnalyzed.current) return
+    hasAnalyzed.current = true
     analyzSymptoms(data.symptoms, data.age, data.gender, data.duration)
   }, [])
 
